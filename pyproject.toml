@@ -1,6 +1,6 @@
 [project]
 name = "profinder"
-version = "0.2.3"
+version = "0.2.4"
 description = "Functions to find profiles in ocean pressure data"
 readme = "README.md"
 authors = [
