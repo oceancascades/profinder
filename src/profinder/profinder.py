@@ -99,7 +99,7 @@ def _find_segment(
     time: Optional[ArrayLike] = None,
     velocity: Optional[ArrayLike] = None,
     min_speed: float = 0.2,
-    direction: Literal["up", "down", "both"] = "down",
+    direction: Literal["up", "down"] = "down",
 ) -> Tuple[int, int]:
     """Find the start and end indices of a single down or up segment.
 
@@ -119,8 +119,8 @@ def _find_segment(
         Pre-computed velocity (same length as pressure). Overrides gradient(time).
     min_speed : float
         Minimum absolute velocity magnitude to be considered valid.
-    direction : {'up','down','both'}
-        Direction(s) in which the speed threshold is enforced.
+    direction : {'up','down'}
+        Direction in which the speed threshold is enforced.
 
     Returns
     -------
@@ -147,8 +147,10 @@ def _find_segment(
             good_velocity = v > min_speed
         elif direction == "up":
             good_velocity = v < -min_speed
-        else:  # both
-            good_velocity = np.abs(v) > min_speed
+        else:
+            raise ValueError(
+                "direction must be 'up' or 'down' when applying speed threshold."
+            )
 
     good_data = good_pressure & good_velocity
 
@@ -337,7 +339,7 @@ def find_segment(
     time: Optional[ArrayLike] = None,
     velocity: Optional[ArrayLike] = None,
     min_speed: float = 0.2,
-    direction: Literal["up", "down", "both"] = "down",
+    direction: Literal["up", "down"] = "down",
 ) -> Tuple[int, int]:
     """Find the start and end indices of a single down or up segment
 
@@ -358,8 +360,8 @@ def find_segment(
         Pre-computed velocity (same length as pressure). Overrides gradient(time).
     min_speed : float
         Minimum absolute velocity magnitude to be considered valid.
-    direction : {'up','down','both'}
-        Direction(s) in which the speed threshold is enforced.
+    direction : {'up','down'}
+        Direction in which the speed threshold is enforced.
 
     Returns
     -------
