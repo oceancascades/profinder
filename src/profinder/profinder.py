@@ -14,6 +14,7 @@ ProfileTuple = Tuple[int, int, int, int]
 __all__ = ["find_profiles", "find_segment"]
 
 _default_peaks_kwargs = {"height": 25, "distance": 200, "width": 200, "prominence": 25}
+_default_troughs_kwargs = {"prominence": 2, "distance": 5, "width": 5}
 
 
 def _contiguous_regions(condition: ArrayLike) -> NDArray[np.int_]:
@@ -227,6 +228,8 @@ def _find_profiles(
     peaks, _ = find_peaks(pressure, **peaks_kwargs)
     troughs, _ = find_peaks(pressure.max() - pressure, **troughs_kwargs)
 
+    _swv = np.lib.stride_tricks.sliding_window_view
+
     profiles = []
     for peak_idx in peaks:
         # Ensure peak is an int to keep mypy happy
@@ -237,10 +240,13 @@ def _find_profiles(
         ds = int(trough_before[-1]) if len(trough_before) > 0 else 0
 
         # Move start forward to first robust descent
-        for i in range(ds, peak - run_length):
-            if np.all(diffs[i : i + run_length] > min_pressure_change):
-                ds = i
-                break
+        # sliding_window_view over diffs[ds:peak-1]: window j -> diffs[ds+j:ds+j+run_length], i=ds+j
+        seg = diffs[ds : peak - 1]
+        if len(seg) >= run_length:
+            wins = _swv(seg, run_length)
+            hits = np.nonzero(np.all(wins > min_pressure_change, axis=1))[0]
+            if len(hits) > 0:
+                ds = ds + int(hits[0])
 
         # Move start to adjust for min_pressure
         while ds + 1 < peak and pressure[ds + 1] < min_pressure:
@@ -251,29 +257,36 @@ def _find_profiles(
         ue = int(trough_after[0]) if len(trough_after) > 0 else ndata - 1
 
         # Move end backward to last robust ascent
-        for i in range(ue, peak + run_length, -1):
-            if i - run_length >= peak and np.all(
-                diffs[i - run_length : i] < -min_pressure_change
-            ):
-                ue = i
-                break
+        # sliding_window_view over diffs[peak+1:ue]: window j -> diffs[peak+1+j:peak+1+j+run_length], i=peak+1+j+run_length
+        seg = diffs[peak + 1 : ue]
+        if len(seg) >= run_length:
+            wins = _swv(seg, run_length)
+            hits = np.nonzero(np.all(wins < -min_pressure_change, axis=1))[0]
+            if len(hits) > 0:
+                ue = peak + 1 + int(hits[-1]) + run_length
 
         while ue - 1 > peak and pressure[ue - 1] < min_pressure:
             ue -= 1
 
         # Ensure a robust run_length of increasing pressure toward the peak
+        # sliding_window_view over diffs[ds+1:peak]: window j -> diffs[ds+1+j:ds+1+j+run_length], i=ds+1+j+run_length
         de = peak
-        for i in range(peak, ds + run_length, -1):
-            if np.all(diffs[i - run_length : i] > min_pressure_change):
-                de = i
-                break
+        seg = diffs[ds + 1 : peak]
+        if len(seg) >= run_length:
+            wins = _swv(seg, run_length)
+            hits = np.nonzero(np.all(wins > min_pressure_change, axis=1))[0]
+            if len(hits) > 0:
+                de = ds + 1 + int(hits[-1]) + run_length
 
         # Ensure a robust run_length of decreasing pressure away from the peak
+        # sliding_window_view over diffs[peak:ue]: window j -> diffs[peak+j:peak+j+run_length], i=peak+j
         us = peak
-        for i in range(peak, ue - run_length + 1):
-            if np.all(diffs[i : i + run_length] < -min_pressure_change):
-                us = i
-                break
+        seg = diffs[peak:ue]
+        if len(seg) >= run_length:
+            wins = _swv(seg, run_length)
+            hits = np.nonzero(np.all(wins < -min_pressure_change, axis=1))[0]
+            if len(hits) > 0:
+                us = peak + int(hits[0])
 
         # (down_start, down_end, up_start, up_end)
         profiles.append((ds, de, us, ue))
@@ -473,7 +486,7 @@ def find_profiles(
     if peaks_kwargs is None:
         peaks_kwargs = _default_peaks_kwargs
     if troughs_kwargs is None:
-        troughs_kwargs = peaks_kwargs
+        troughs_kwargs = _default_troughs_kwargs
     if "height" not in peaks_kwargs:
         raise ValueError("peaks_kwargs must contain 'height' key for peak detection.")
 
