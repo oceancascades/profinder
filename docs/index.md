@@ -181,10 +181,10 @@ Below, we create a toy model of a VMP that initially falls in free-fall, before 
 A possible system of differential equations for the instrument motion is:
 
 $$
-\begin{align*}
+\begin{aligned}
 \frac{dz}{dt} &= w \\
 \frac{dw}{dt} &= g \frac{m_v - m_w}{m_v} - \frac{m_w}{m_v} \frac{C_d}{L} w |w| + \frac{T(t)}{m_v}
-\end{align*}
+\end{aligned}
 $$
 
 where $z$ is the height, $w$ is the vertical velocity, $g$ is gravity, $m_v$ is the instrument mass, $m_w$ is the mass of water displaced, $C_d$ is the drag coefficient, $L$ is the hull length, and $T(t)$ is the time-dependent tension from the winch. These equations are solved in the code to produce a synthetic depth profile. We also mimic the sampling rate of a real VMP (60 Hz). 
