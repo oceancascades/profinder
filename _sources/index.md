@@ -108,6 +108,8 @@ We can also set a minimum pressure threshold for profiles to start and end. Note
 
 You can also increase the `run_length` to make sure that the instrument is going up/down for a sufficient number of points to consider the profile started and ended. This argument is coupled with `min_pressure_change`, which defines the minimum pressure changes between each point in the run. For example, if your profile starts with pressure values [1, 2, 5, 8, ...] and you have a run length of 2 and minimum pressure change of 2, the profile would start at the value 2, because the although the pressure is always increasing, the change between 1 and 2 does not exceed the minimum. This removes some of the flatter regions in data. 
 
+Additionally, it is sometimes necessary to modify the `troughs_kwargs` to avoid mid-profile troughs being identifies as the profile start or end. 
+
 ```{code-cell}
 segments = find_profiles(
   pressure, 
@@ -115,7 +117,8 @@ segments = find_profiles(
   window_length=9, 
   min_pressure=3.0, 
   run_length=10, 
-  peaks_kwargs=peaks_kwargs
+  peaks_kwargs=peaks_kwargs,
+  troughs_kwargs={"height": 15, "distance": 200, "width": 200, "prominence": 15}
   )
 ```
 
